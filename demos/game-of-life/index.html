@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Game of Life</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: content-box;
+        }
+        canvas {
+            display: block;
+            /*width: 90vw;*/
+            margin: auto;
+            margin-top: 5vh;
+            /*height: 70vh; */
+            border: 10px solid #aaa;
+        }
+    </style>
+</head>
+<body id="body">
+    <canvas id="canvas"></canvas>
+    <script>
+
+        const size = 15;
+        const matrix_size = 400;
+
+        // function $(id) {
+        //     return document.getElementById(id);
+        // }
+
+        // let $ = function(id) {
+        //     return document.getElementById(id);
+        // }
+
+        let $ = (id) => { return document.getElementById(id); }
+
+        let canvas = $('canvas');
+        let matrix = new Array(matrix_size).fill(0).map(() => new Array(matrix_size).fill(0));
+
+
+        let resizeCanvas = () => {
+            canvas.width = window.innerWidth * .9 - ((window.innerWidth * .9) % size);
+            canvas.height = window.innerHeight * .7 - ((window.innerHeight * .7) % size);
+        }
+
+        let drawGrid = () => {
+            let ctx = $('canvas').getContext('2d');
+            ctx.strokeStyle = '#ccc'; // grid color
+            // columns
+            for (i = 0; i <= canvas.width; i += size) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+            }
+
+            // lines
+            for (i = 0; i < canvas.height; i += size) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvas.width, i);
+                ctx.stroke();
+            }
+
+            // cells
+            matrix.map((row, i)  => {
+                row.map((cell, j) => {
+                    if (cell == 0) {
+                        ctx.fillStyle = 'rgb(255, 255, 255)';
+                    } else {
+                        ctx.fillStyle = 'rgb(220, 220, 20)';
+                    }
+                    ctx.fillRect(i * size, j * size, size - 1, size - 1);
+                })
+            });
+        }
+
+        resizeCanvas();
+        drawGrid();
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            drawGrid() ;
+        });
+
+        // let matrix = [];
+        // for (i = 0; i < matrix_size; i++) {
+        //     matrix.push([]);
+        //     for (j = 0; j < matrix_size; j++) {
+        //         matrix[i].push(0);
+        //     }
+        // }
+
+
+
+        canvas.addEventListener('click', evt => {
+            let ctx = canvas.getContext('2d');
+            let pos = [evt.offsetX, evt.offsetY].map(num => (num - num % size) / size );
+            matrix[pos[0]][pos[1]] = matrix[pos[0]][pos[1]] == 1 ? 0 : 1;
+            drawGrid();
+
+            // ctx.fillStyle = 'rgb(220, 220, 20)';
+            // ctx.fillRect(pos[0], pos[1], size, size);
+        });
+
+    </script>
+</body>
+</html>
