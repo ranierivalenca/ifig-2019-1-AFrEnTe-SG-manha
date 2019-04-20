@@ -17,10 +17,25 @@
             /*height: 70vh; */
             border: 10px solid #aaa;
         }
+        .actions {
+            text-align: center;
+        }
     </style>
 </head>
 <body id="body">
     <canvas id="canvas"></canvas>
+    <div class="actions">
+        <a href="#" id="step-action">Step</a>
+        <a href="#" id="start-action">Start</a>
+        <a href="#" id="stop-action">Stop</a>
+        <input id="delay" type="number" step="0.01" value="0.02" min="0.01">
+    </div>
+    <div class="status">
+        <div class="step">
+            Steps: <span id="step-count"></span> /
+            Step avg microtime: <span id="step-time"></span>
+        </div>
+    </div>
     <script>
 
         const size = 15;
@@ -34,16 +49,41 @@
         //     return document.getElementById(id);
         // }
 
+        // let matrix = [];
+        // for (i = 0; i < matrix_size; i++) {
+        //     matrix.push([]);
+        //     for (j = 0; j < matrix_size; j++) {
+        //         matrix[i].push(0);
+        //     }
+        // }
+        // let matrix = new Array(matrix_size).fill(0).map(() => new Array(matrix_size).fill(0));
+
         let $ = (id) => { return document.getElementById(id); }
 
+        let i = 0;
         let canvas = $('canvas');
-        let matrix = new Array(matrix_size).fill(0).map(() => new Array(matrix_size).fill(0));
+        let cols = rows = 0;
+        let matrix = [];
+        let colors = [];
+        let animId = -1;
+        let moving = false;
+        let stepCount = 0;
+
+        let stepTimes = [];
 
 
         let resizeCanvas = () => {
             canvas.width = window.innerWidth * .9 - ((window.innerWidth * .9) % size);
             canvas.height = window.innerHeight * .7 - ((window.innerHeight * .7) % size);
+            cols = canvas.width / size;
+            rows = canvas.height / size;
+
+            // a matriz pode ser pequena, pelo fato do jogo ser circular; caso contrário, teríamos que arbitrar um número suficientemente grande para esta matriz (matrix_size).
+            matrix = new Array(cols).fill(0).map(() => new Array(rows).fill(0));
+            colors = new Array(cols).fill(0).map(() => new Array(rows).fill(0).map(el => i++));
         }
+
+        let is_visible = (i, j) => (i * size) < canvas.width && (j * size) < canvas.height;
 
         let drawGrid = () => {
             let ctx = $('canvas').getContext('2d');
@@ -67,14 +107,68 @@
             // cells
             matrix.map((row, i)  => {
                 row.map((cell, j) => {
+                    if (!is_visible(i, j)) return;
                     if (cell == 0) {
                         ctx.fillStyle = 'rgb(255, 255, 255)';
                     } else {
-                        ctx.fillStyle = 'rgb(220, 220, 20)';
+                        // ctx.fillStyle = 'rgb(220, 220, 20)';
+                        ctx.fillStyle = `hsl(${colors[i][j]}, 70%, 50%)`;
                     }
                     ctx.fillRect(i * size, j * size, size - 1, size - 1);
                 })
             });
+        }
+
+        let step = () => {
+            let t0 = performance.now();
+            matrix = matrix.map((row, i) => {
+                return row.map((cell, j) => {
+                    // esse trecho de código parece que estava muito lento, mas precisaria ser adaptado pra um jogo "circular"
+                    // let neighbors = matrix.slice(Math.max(0, i - 1), i + 2)
+                    //                       .map(r => r.slice(Math.max(0, j - 1), j + 2));
+
+                    // let neighborsCount = -cell + neighbors.map(
+                    //     r => r.reduce((acc, val) => acc + val)
+                    // ).reduce((acc, val) => acc + val);
+                    let _i = i - 1, i_ = i + 1, _j = j - 1, j_ = j + 1;
+
+                    // este trecho de código faz com que o jogo seja "circular"
+                    if (_i < 0) _i = cols - 1;
+                    if (_j < 0) _j = rows - 1;
+                    if (i_ == cols) i_ = 0;
+                    if (j_ == rows) j_ = 0;
+                    // fim do trecho circular
+
+                    let neighborsCount = (matrix[_i] ? ((matrix[_i][_j] || 0) + matrix[_i][j] + (matrix[_i][j_] || 0)) : 0) +
+                                         (matrix[i][_j] || 0) + (matrix[i][j_] || 0) +
+                                         (matrix[i_] ? ((matrix[i_][_j] || 0) + matrix[i_][j] + (matrix[i_][j_] || 0)) : 0);
+                    // console.log(i, j, cell, neighborsCount);
+                    // console.log();
+                    if (neighborsCount == 3) {
+                        return 1;
+                    }
+                    if (neighborsCount == 2 || neighborsCount == 3) {
+                        return cell;
+                    }
+                    return 0;
+                });
+            });
+            let t = performance.now();
+            stepTimes.push(t - t0);
+            drawGrid();
+            stepCount++;
+        }
+
+        let move = () => {
+            animId = setTimeout(() => {
+                step();
+                move();
+            }, parseFloat($('delay').value) * 1000);
+            moving = true;
+        }
+        let stop = () => {
+            clearInterval(animId);
+            moving = false;
         }
 
         resizeCanvas();
@@ -84,25 +178,36 @@
             drawGrid() ;
         });
 
-        // let matrix = [];
-        // for (i = 0; i < matrix_size; i++) {
-        //     matrix.push([]);
-        //     for (j = 0; j < matrix_size; j++) {
-        //         matrix[i].push(0);
-        //     }
-        // }
-
-
-
         canvas.addEventListener('click', evt => {
             let ctx = canvas.getContext('2d');
             let pos = [evt.offsetX, evt.offsetY].map(num => (num - num % size) / size );
             matrix[pos[0]][pos[1]] = matrix[pos[0]][pos[1]] == 1 ? 0 : 1;
             drawGrid();
-
-            // ctx.fillStyle = 'rgb(220, 220, 20)';
-            // ctx.fillRect(pos[0], pos[1], size, size);
         });
+        $('step-action').addEventListener('click', evt => {
+            evt.preventDefault();
+            step();
+        });
+        $('start-action').addEventListener('click', evt => {
+            evt.preventDefault();
+            move();
+        });
+        $('stop-action').addEventListener('click', evt => {
+            evt.preventDefault();
+            if (!moving) return;
+            stop();
+        });
+        $('delay').addEventListener('change', evt => {
+            if (!moving) return;
+            stop();
+            move();
+        });
+
+        setInterval(() => {
+            $('step-count').innerHTML = stepCount;
+            $('step-time').innerHTML = `${stepTimes.reduce((a, v) => a + v, 0)/Math.max(stepTimes.length, 1)} (${stepTimes.length} steps)`;
+            stepTimes = [];
+        }, 1000);
 
     </script>
 </body>
