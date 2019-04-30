@@ -1,0 +1,34 @@
+.gallery {
+    width: 100px;
+    height: 100px;
+    position: absolute;
+    top: calc(50% - 50px);
+    left: calc(50% - 50px);
+    transform-style: preserve-3d;
+    perspective: 1000px;
+}
+.img {
+    width: 100px;
+    height: 100px;
+    position: absolute;
+    transition: 1s;
+ }
+.bg(@x) {
+    @color: (@x - 1) * 30;
+    @angle: (@x - 1) * 18deg;
+    @transZ: 350px;
+    .img-@{x} {
+        background: hsl(@color, 80%, 80%);
+        transform: rotateX(-0deg) rotateY(@angle) translateZ(@transZ);
+        animation: 10s infinite linear ~'gira@{x}';
+    }
+    @keyframes ~'gira@{x}' {
+        0% { transform: rotateX(-0deg) rotateY(@angle) translateZ(@transZ); }
+        100% { transform: rotateX(-0deg) rotateY(@angle + 360deg) translateZ(@transZ); }
+    }
+}
+.loop(@counter) when (@counter > 0) {
+    .bg(@counter);
+    .loop((@counter - 1));
+}
+.loop(20);
